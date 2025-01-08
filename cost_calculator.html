@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이벤트 비용 계산기</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        button {
+            background-color: #007BFF;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .event-category {
+            margin-bottom: 20px;
+        }
+        .event-category h2 {
+            margin-bottom: 10px;
+        }
+        .event-list label {
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>이벤트 비용 계산기</h1>
+    <div id="event-selections"></div>
+    <button onclick="calculateSelectedEvents()">계산하기</button>
+    <button onclick="recommendCheapestUncheckedEvents()">추천 항목 보기</button>
+    <div id="console-output" style="white-space: pre-line; margin-top: 20px; border: 1px solid #ddd; padding: 10px; background-color: #f9f9f9;">
+        <strong>결과 출력:</strong>
+        <div id="output"></div>
+    </div>
+
+    <script>
+        const events = {
+            "1학년용": {
+                "새축": 10,
+                "해오름제": 175,
+                "성년의 날": 40,
+            },
+            "전학년용": {
+                "엠티": 1100,
+                "개총": 100,
+                "공대 체전": 15,
+            }
+        };
+
+        const eventParticipants = {
+            "1학년용": {
+                "새축": 50,
+                "해오름제": 40,
+                "성년의 날": 80,
+            },
+            "전학년용": {
+                "엠티": 150,
+                "개총": 100,
+                "공대 체전": 30,
+            }
+        };
+
+        function calculatePerPersonCost(events, participants) {
+            const perPersonCosts = {};
+            for (const eventType in events) {
+                perPersonCosts[eventType] = {};
+                for (const eventName in events[eventType]) {
+                    const cost = events[eventType][eventName];
+                    const numPeople = participants[eventType] ? participants[eventType][eventName] : 0;
+                    if (numPeople > 0) {
+                        perPersonCosts[eventType][eventName] = cost / numPeople;
+                    } else {
+                        perPersonCosts[eventType][eventName] = "참가자 수 없음";
+                    }
+                }
+            }
+            return perPersonCosts;
+        }
+
+        const perPersonCosts = calculatePerPersonCost(events, eventParticipants);
+
+        function displayEventOptions() {
+            const eventSelections = document.getElementById('event-selections');
+
+            for (const eventType in perPersonCosts) {
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'event-category';
+
+                const categoryHeader = document.createElement('h2');
+                categoryHeader.textContent = eventType;
+                categoryDiv.appendChild(categoryHeader);
+
+                const eventList = document.createElement('div');
+                eventList.className = 'event-list';
+
+                for (const eventName in perPersonCosts[eventType]) {
+                    const label = document.createElement('label');
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.name = eventType;
+                    checkbox.value = eventName;
+
+                    label.appendChild(checkbox);
+                    label.appendChild(document.createTextNode(` ${eventName} (1인당 비용: ${
+                        typeof perPersonCosts[eventType][eventName] === 'number'
+                            ? perPersonCosts[eventType][eventName].toFixed(2) + '만원'
+                            : perPersonCosts[eventType][eventName]
+                    })`));
+
+                    eventList.appendChild(label);
+                }
+
+                categoryDiv.appendChild(eventList);
+                eventSelections.appendChild(categoryDiv);
+            }
+        }
+
+        function calculateSelectedEvents() {
+            const selectedCheckboxes = document.querySelectorAll('#event-selections input[type="checkbox"]:checked');
+            let totalPrice = 0;
+
+            selectedCheckboxes.forEach((checkbox) => {
+                const eventType = checkbox.name;
+                const eventName = checkbox.value;
+                const eventPrice = perPersonCosts[eventType][eventName];
+
+                if (typeof eventPrice === 'number') {
+                    totalPrice += eventPrice;
+                }
+            });
+
+            const studentFee = 30;
+            const fourYearsTotalPrice = studentFee - (totalPrice * 3);
+
+            let resultMessage = `최종 합계: ${totalPrice.toFixed(2)}만원\n`;
+            if (fourYearsTotalPrice <= 0) {
+                resultMessage += `이익: ${(-fourYearsTotalPrice).toFixed(2)}만원\n2학년 때 참여도를 1학년과 비슷하게 유지하고 3,4학년 때 절반의 참여도를 유지하면 이득을 볼 확률이 높습니다.`;
+            } else {
+                resultMessage += `손해: ${fourYearsTotalPrice.toFixed(2)}만원\n손해를 볼 확률이 높습니다.`;
+            }
+
+            appendOutput(resultMessage);
+        }
+
+        function recommendCheapestUncheckedEvents() {
+            const allUncheckedEvents = [];
+            const checkedEventNames = Array.from(document.querySelectorAll('#event-selections input[type="checkbox"]:checked'))
+                .map((checkbox) => ({ eventType: checkbox.name, eventName: checkbox.value }));
+
+            for (const eventType in perPersonCosts) {
+                for (const eventName in perPersonCosts[eventType]) {
+                    if (
+                        typeof perPersonCosts[eventType][eventName] === 'number' &&
+                        !checkedEventNames.some((checked) => checked.eventType === eventType && checked.eventName === eventName)
+                    ) {
+                        allUncheckedEvents.push({ eventType, eventName, cost: perPersonCosts[eventType][eventName] });
+                    }
+                }
+            }
+
+            allUncheckedEvents.sort((a, b) => a.cost - b.cost);
+
+            const recommendations = allUncheckedEvents.slice(0, 2);
+            if (recommendations.length > 0) {
+                appendOutput("\n추천 항목:");
+                recommendations.forEach(({ eventType, eventName, cost }) => {
+                    appendOutput(`  ${eventType} - ${eventName}: ${cost.toFixed(2)}만원`);
+                });
+            } else {
+                appendOutput("\n추천할 항목이 없습니다.");
+            }
+        }
+
+        function appendOutput(message) {
+            const outputDiv = document.getElementById('output');
+            outputDiv.innerText += `\n${message}`;
+        }
+
+        displayEventOptions();
+    </script>
+</body>
+</html>
