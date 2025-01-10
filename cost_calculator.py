@@ -12,7 +12,7 @@ payload = {
 # 헤더 (필요에 따라 추가)
 headers = {
     "Content-Type": "application/json",
-    "Authorization": "2D9BB0123ADD49A2A9504C0E63CBA7FBA6C926CC"  # API 키가 필요할 경우
+    "Authorization": ""  # API 키가 필요할 경우
 }
 
 # POST 요청 보내기
