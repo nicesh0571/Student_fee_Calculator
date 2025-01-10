@@ -128,8 +128,9 @@ def sum_event_prices(updated_events, event_type, total_price):
 
 def select_and_sum_event_prices(updated_events):
     total_price = 0
-    student_fee = item.get('책정금액(원)')
-    student_fee = int(student_fee) / 10000   # 기본 학생 회비
+    #student_fee = item.get('책정금액(원)')
+    #student_fee = int(student_fee) / 10000   # 기본 학생 회비
+    student_fee = 30
     print(student_fee)
     while True:
         print("\n이벤트 유형을 선택하세요:")
